@@ -1,47 +1,40 @@
-package server;
+package client;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.util.ArrayList;
 
-public class server {
-	
-	private static DatagramSocket socket;
-	private static boolean running;
-	private static int clientId;
-	private static ArrayList<clientInfo> clients=new ArrayList<clientInfo>();
-	
-	public static void start(int port){
+import server.clientInfo;
+
+public class client {
+
+	private DatagramSocket socket;
+	private InetAddress adress;
+	private int port;
+	private boolean running;
+	private String name;
+	public client(String name,String adress,int port) {
 		try {
-			socket=new DatagramSocket(port);
+			this.adress=InetAddress.getByName(adress);
+			this.port=port;
+			this.name=name;
+			socket=new DatagramSocket();
 			running=true;
 			listen();
-			System.out.println("server start on port" + port);
-			
-			
-		}catch(Exception e) {
+			send("\\con:"+name);
+			}
+		catch(Exception e) {
 			e.printStackTrace();
-			
-		}
-	}
-	
-	/**
-	 * send a message to every connected client
-	 */
-	private static void broadcast(String message) {
-		for (clientInfo Info : clients) {
-			send(message,Info.getAdress(),Info.getPort());
-			
-		}
+		}	
 		
 	}
 	
-	/**
-	 * send message to indivduel client
-	 */
-	private static void send(String message, InetAddress adress,int port) {
+	public void send(String message) {
 		try {
+			if(!message.startsWith("\\")) {
+				message=name+":"+message;
+			}
+			
 			message+="//e";
 			byte[]data=message.getBytes();
 			DatagramPacket packet=new DatagramPacket(data,data.length,adress,port);
@@ -53,12 +46,14 @@ public class server {
 			
 		}
 		
+		
+		
 	}
-
+	
 	/**
 	 * has a thread-running the entire time that the server running-wait for message 
 	 */
-	private static void listen() {
+	private void listen() {
 		Thread listenThread=new Thread("chatprogram listener") {
 			public void run() {
 				try {
@@ -70,7 +65,8 @@ public class server {
 						message=message.substring(0, message.indexOf("//e"));
 						
 						if(!iscommand(message, packet)) {
-							broadcast(message);
+							clientWindow.printToConsole(message);
+							
 						}
 							
 						
@@ -90,6 +86,7 @@ public class server {
 	
 	}
 	
+	
 	/**
 	 * server command LIST
 	 * \\con[name]->connects client to srever
@@ -102,23 +99,12 @@ public class server {
 		
 		if(message.startsWith("\\con:")) {
 			//run conecction code
-			String name=message.substring(message.indexOf(":"));
-			clients.add(new clientInfo(name,clientId++,packet.getAddress(),packet.getPort()));
-			broadcast("User " +name+ ",conected");
 			return true;
 		}
 		
 		
 		
 		return false;
-	}
-	
-	/**
-	 * stop the server
-	 */
-	public static void stop() {
-		running=false;
-		
 	}
 
 }
